@@ -1,4 +1,3 @@
-
 export enum UserType {
   CUSTOMER = 'customer',
   ADMIN = 'admin',
@@ -16,6 +15,7 @@ export interface Message {
 }
 
 export interface MenuItem {
+  id: string;
   name: string;
   category: string;
   price: number;

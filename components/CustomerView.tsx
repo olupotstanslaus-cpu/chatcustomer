@@ -1,9 +1,6 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-// FIX: Import OrderStatus to use the enum value instead of a raw string.
-import { Message, MessageSender, Order, OrderItem, OrderStatus } from '../types';
+import { Message, MessageSender, Order, OrderItem, OrderStatus, MenuItem } from '../types';
 import { sendMessageToGemini } from '../services/geminiService';
-import { MENU } from '../constants';
 
 const ChatBubble: React.FC<{ message: Message }> = ({ message }) => {
   const isUser = message.sender === MessageSender.USER;
@@ -20,9 +17,10 @@ const ChatBubble: React.FC<{ message: Message }> = ({ message }) => {
 interface CustomerViewProps {
   addOrder: (newOrder: Order) => void;
   getOrderById: (orderId: string) => Order | undefined;
+  menuItems: MenuItem[];
 }
 
-const CustomerView: React.FC<CustomerViewProps> = ({ addOrder, getOrderById }) => {
+const CustomerView: React.FC<CustomerViewProps> = ({ addOrder, getOrderById, menuItems }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       text: "Hello! 👋 Welcome to La Pizzeria del AI. How can I help you today? You can ask for the menu, add items to your order, or place an order.",
@@ -41,16 +39,18 @@ const CustomerView: React.FC<CustomerViewProps> = ({ addOrder, getOrderById }) =
 
   const localFunctions = {
     getMenu: useCallback(async () => {
-      const menuString = MENU.map(
-        (category) =>
-          `\n**${category.category}**\n` +
-          category.name +
-          ` - $${category.price.toFixed(2)}\n*${category.description}*`
-      ).join('\n');
+      const categories = [...new Set(menuItems.map(item => item.category))];
+      const menuString = categories.map(category => {
+          const itemsInCategory = menuItems
+              .filter(item => item.category === category)
+              .map(item => `${item.name} - $${item.price.toFixed(2)}\n*${item.description}*`)
+              .join('\n');
+          return `\n**${category}**\n${itemsInCategory}`;
+      }).join('\n');
       return { success: true, message: `Here is our menu:\n${menuString}` };
-    }, []),
+    }, [menuItems]),
     addToOrder: useCallback(async ({ itemName, quantity }: { itemName: string; quantity: number }) => {
-        const item = MENU.find(m => m.name.toLowerCase() === itemName.toLowerCase());
+        const item = menuItems.find(m => m.name.toLowerCase() === itemName.toLowerCase());
         if (!item) {
             return { success: false, message: `Sorry, we don't have "${itemName}" on our menu.` };
         }
@@ -66,7 +66,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({ addOrder, getOrderById }) =
         });
         const orderTotal = currentOrder.reduce((sum, i) => sum + i.price * i.quantity, 0) + newOrderItem.price * newOrderItem.quantity;
         return { success: true, message: `Added ${quantity}x ${itemName} to your order. Your current total is $${orderTotal.toFixed(2)}.` };
-    }, [currentOrder]),
+    }, [currentOrder, menuItems]),
     placeOrder: useCallback(async () => {
         if (currentOrder.length === 0) {
             return { success: false, message: "Your order is empty. Please add some items before placing an order." };
@@ -76,7 +76,6 @@ const CustomerView: React.FC<CustomerViewProps> = ({ addOrder, getOrderById }) =
             id: Math.random().toString(36).substr(2, 6).toUpperCase(),
             items: currentOrder,
             total,
-            // FIX: Use the OrderStatus enum for type safety.
             status: OrderStatus.PENDING,
             customerName: 'Valued Customer',
             timestamp: new Date(),
