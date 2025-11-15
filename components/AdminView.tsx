@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Order, OrderStatus, MenuItem } from '../types';
 import ProductManagement from './ProductManagement';
+import Dashboard from './Dashboard';
+import { statusColors } from '../constants';
+
+type SortKey = 'timestamp' | 'status' | 'total';
+type SortOrder = 'asc' | 'desc';
 
 interface AdminViewProps {
   orders: Order[];
@@ -10,15 +15,6 @@ interface AdminViewProps {
   updateMenuItem: (item: MenuItem) => void;
 }
 
-const statusColors: Record<OrderStatus, string> = {
-  [OrderStatus.PENDING]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  [OrderStatus.CONFIRMED]: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  [OrderStatus.PREPARING]: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
-  [OrderStatus.OUTFORDELIVERY]: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-  [OrderStatus.DELIVERED]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  [OrderStatus.CANCELLED]: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-};
-
 const OrderCard: React.FC<{ order: Order, onStatusChange: (orderId: string, newStatus: OrderStatus) => void, isUpdating: boolean }> = ({ order, onStatusChange, isUpdating }) => {
   return (
     <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 transition-all hover:shadow-xl">
@@ -26,6 +22,9 @@ const OrderCard: React.FC<{ order: Order, onStatusChange: (orderId: string, newS
         <div>
           <h3 className="font-bold text-lg text-gray-800 dark:text-white">Order #{order.id}</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">{order.timestamp.toLocaleString()}</p>
+           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Est. Delivery: {order.estimatedDeliveryTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
         </div>
         <div className={`px-3 py-1 text-sm font-medium rounded-full ${statusColors[order.status]}`}>
           {order.status}
@@ -66,13 +65,14 @@ const OrderCard: React.FC<{ order: Order, onStatusChange: (orderId: string, newS
   );
 };
 
-
 const AdminView: React.FC<AdminViewProps> = ({ orders, updateOrderStatus, menuItems, addMenuItem, updateMenuItem }) => {
     const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'orders' | 'menu'>('orders');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu'>('dashboard');
+    const [sortKey, setSortKey] = useState<SortKey>('timestamp');
+    const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
     const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
-        if (updatingOrderId) return; // Prevent multiple updates at once
+        if (updatingOrderId) return;
         setUpdatingOrderId(orderId);
         try {
             await updateOrderStatus(orderId, newStatus);
@@ -80,10 +80,54 @@ const AdminView: React.FC<AdminViewProps> = ({ orders, updateOrderStatus, menuIt
             setUpdatingOrderId(null);
         }
     };
-
-    const sortedOrders = [...orders].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     
-    const TabButton: React.FC<{tabName: 'orders' | 'menu', label: string}> = ({ tabName, label }) => (
+    const handleSort = (key: SortKey) => {
+        if (key === sortKey) {
+            setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortKey(key);
+            setSortOrder('asc');
+        }
+    };
+
+    const sortedOrders = useMemo(() => {
+        return [...orders].sort((a, b) => {
+            const aVal = a[sortKey];
+            const bVal = b[sortKey];
+
+            let comparison = 0;
+            if (aVal > bVal) {
+                comparison = 1;
+            } else if (aVal < bVal) {
+                comparison = -1;
+            }
+
+            return sortOrder === 'asc' ? comparison : -comparison;
+        });
+    }, [orders, sortKey, sortOrder]);
+    
+    const SortButton: React.FC<{ sortKeyName: SortKey, label: string }> = ({ sortKeyName, label }) => {
+        const isActive = sortKey === sortKeyName;
+        const Icon = () => {
+            if (!isActive) return <span className="w-4 h-4" />;
+            return sortOrder === 'asc' ? <span>▲</span> : <span>▼</span>;
+        };
+        return (
+            <button
+                onClick={() => handleSort(sortKeyName)}
+                className={`flex items-center space-x-1 px-3 py-1 text-sm rounded-md transition-colors ${
+                    isActive
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
+                        : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+            >
+                <span>{label}</span>
+                <Icon />
+            </button>
+        );
+    };
+
+    const TabButton: React.FC<{tabName: 'dashboard' | 'orders' | 'menu', label: string}> = ({ tabName, label }) => (
         <button
             onClick={() => setActiveTab(tabName)}
             className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors focus:outline-none ${
@@ -101,10 +145,15 @@ const AdminView: React.FC<AdminViewProps> = ({ orders, updateOrderStatus, menuIt
       <header className="p-4 border-b border-gray-200 dark:border-gray-700">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Admin Dashboard</h1>
         <nav className="mt-2 -mb-px flex space-x-4" aria-label="Tabs">
+            <TabButton tabName="dashboard" label="Dashboard" />
             <TabButton tabName="orders" label={`Orders (${orders.length})`} />
             <TabButton tabName="menu" label={`Menu (${menuItems.length})`} />
         </nav>
       </header>
+      
+      {activeTab === 'dashboard' && (
+        <Dashboard orders={orders} />
+      )}
 
       {activeTab === 'orders' && (
         <>
@@ -119,10 +168,18 @@ const AdminView: React.FC<AdminViewProps> = ({ orders, updateOrderStatus, menuIt
                     </div>
                 </div>
             ) : (
-                <div className="flex-grow p-4 overflow-y-auto space-y-4 bg-gray-100 dark:bg-gray-800/50">
-                {sortedOrders.map(order => (
-                    <OrderCard key={order.id} order={order} onStatusChange={handleStatusUpdate} isUpdating={updatingOrderId === order.id} />
-                ))}
+                <div className="flex flex-col h-full">
+                    <div className="p-3 bg-gray-100 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sort by:</span>
+                        <SortButton sortKeyName="timestamp" label="Date" />
+                        <SortButton sortKeyName="status" label="Status" />
+                        <SortButton sortKeyName="total" label="Total" />
+                    </div>
+                    <div className="flex-grow p-4 overflow-y-auto space-y-4 bg-gray-100 dark:bg-gray-800/50">
+                    {sortedOrders.map(order => (
+                        <OrderCard key={order.id} order={order} onStatusChange={handleStatusUpdate} isUpdating={updatingOrderId === order.id} />
+                    ))}
+                    </div>
                 </div>
             )}
         </>

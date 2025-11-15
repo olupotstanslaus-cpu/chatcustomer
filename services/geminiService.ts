@@ -46,6 +46,27 @@ const functionDeclarations: FunctionDeclaration[] = [
             },
             required: ['orderId']
         }
+    },
+    {
+        name: 'requestCancelOrder',
+        description: 'Initiates a request to cancel a pending order. Requires user confirmation before proceeding.',
+        parameters: {
+            type: Type.OBJECT,
+            properties: {
+                orderId: { type: Type.STRING, description: 'The ID of the order to be cancelled.' }
+            },
+            required: ['orderId']
+        }
+    },
+    {
+        name: 'confirmCancelOrder',
+        description: 'Confirms the cancellation of an order after the user has been prompted.',
+        parameters: { type: Type.OBJECT, properties: {} }
+    },
+    {
+        name: 'abortCancelOrder',
+        description: 'Aborts the order cancellation process after the user has been prompted.',
+        parameters: { type: Type.OBJECT, properties: {} }
     }
 ];
 

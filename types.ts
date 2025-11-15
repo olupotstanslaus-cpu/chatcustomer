@@ -44,4 +44,13 @@ export interface Order {
   status: OrderStatus;
   customerName: string;
   timestamp: Date;
+  estimatedDeliveryTime: Date;
+}
+
+export type Page = 'home' | 'gallery' | 'contact' | 'order' | 'admin';
+
+export interface Notification {
+  id: string;
+  message: string;
+  orderId: string;
 }
