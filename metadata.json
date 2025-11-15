@@ -1,0 +1,5 @@
+{
+  "name": "WhatsApp Restaurant Chatbot",
+  "description": "An AI-powered chatbot for a restaurant that allows customers to place orders through a WhatsApp-like interface. An admin panel is included for managing incoming orders.",
+  "requestFramePermissions": []
+}
