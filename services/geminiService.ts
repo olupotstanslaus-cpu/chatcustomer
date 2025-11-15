@@ -1,13 +1,7 @@
-
 import { GoogleGenAI, Chat, FunctionDeclaration, Type } from "@google/genai";
 import { GEMINI_SYSTEM_INSTRUCTION } from "../constants";
 
-let ai: GoogleGenAI | null = null;
 let chat: Chat | null = null;
-
-if (process.env.API_KEY) {
-    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-}
 
 const functionDeclarations: FunctionDeclaration[] = [
     {
@@ -29,7 +23,17 @@ const functionDeclarations: FunctionDeclaration[] = [
     },
     {
         name: 'placeOrder',
-        description: 'Finalize and place the current order.',
+        description: 'Presents a summary of the current order to the user for confirmation before finalizing.',
+        parameters: { type: Type.OBJECT, properties: {} }
+    },
+    {
+        name: 'finalizeOrder',
+        description: 'Confirms and finalizes the order after the user has approved the summary.',
+        parameters: { type: Type.OBJECT, properties: {} }
+    },
+    {
+        name: 'cancelOrderPlacement',
+        description: 'Cancels the order placement process if the user decides not to proceed after seeing the summary.',
         parameters: { type: Type.OBJECT, properties: {} }
     },
     {
@@ -46,9 +50,10 @@ const functionDeclarations: FunctionDeclaration[] = [
 ];
 
 const initializeChat = () => {
-    if (!ai) {
-        throw new Error("Gemini AI not initialized. Make sure API_KEY is set.");
+    if (!process.env.API_KEY) {
+        throw new Error("Gemini API Key not found. Please set the API_KEY environment variable.");
     }
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     chat = ai.chats.create({
         model: 'gemini-2.5-flash',
         config: {

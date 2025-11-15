@@ -31,6 +31,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({ addOrder, getOrderById, men
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
+  const [awaitingOrderConfirmation, setAwaitingOrderConfirmation] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -71,6 +72,18 @@ const CustomerView: React.FC<CustomerViewProps> = ({ addOrder, getOrderById, men
         if (currentOrder.length === 0) {
             return { success: false, message: "Your order is empty. Please add some items before placing an order." };
         }
+        setAwaitingOrderConfirmation(true);
+        const total = currentOrder.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const summary = currentOrder.map(item => `${item.quantity} x ${item.name}`).join('\n');
+        return { 
+            success: true, 
+            message: `🔔 Order Confirmation 🔔\n\nPlease review your order:\n\n${summary}\n\n**Total: $${total.toFixed(2)}**\n\nIs this correct? (yes/no)` 
+        };
+    }, [currentOrder]),
+    finalizeOrder: useCallback(async () => {
+        if (!awaitingOrderConfirmation || currentOrder.length === 0) {
+            return { success: false, message: "There is no order to confirm. Please add items to your cart first." };
+        }
         const total = currentOrder.reduce((sum, item) => sum + item.price * item.quantity, 0);
         const newOrder: Order = {
             id: Math.random().toString(36).substr(2, 6).toUpperCase(),
@@ -82,8 +95,16 @@ const CustomerView: React.FC<CustomerViewProps> = ({ addOrder, getOrderById, men
         };
         addOrder(newOrder);
         setCurrentOrder([]);
-        return { success: true, message: `Your order has been placed successfully! Your order ID is #${newOrder.id}.` };
-    }, [currentOrder, addOrder]),
+        setAwaitingOrderConfirmation(false);
+        return { success: true, message: `Your order has been placed successfully! 🎉 Your order ID is #${newOrder.id}.` };
+    }, [currentOrder, addOrder, awaitingOrderConfirmation]),
+    cancelOrderPlacement: useCallback(async () => {
+        if (!awaitingOrderConfirmation) {
+            return { success: false, message: "" };
+        }
+        setAwaitingOrderConfirmation(false);
+        return { success: true, message: "Order placement cancelled. You can continue adding items to your order." };
+    }, [awaitingOrderConfirmation]),
     getOrderStatus: useCallback(async ({ orderId }: { orderId: string }) => {
         const order = getOrderById(orderId.replace('#', ''));
         if (order) {
