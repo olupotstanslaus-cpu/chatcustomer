@@ -28,7 +28,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigateTo }) => {
       </button>
       <nav className="hidden md:flex items-center space-x-2">
         <NavLink pageName="home">Home</NavLink>
-        <NavLink pageName="gallery">Gallery</NavLink>
         <NavLink pageName="contact">Contact Us</NavLink>
       </nav>
       <div className="flex items-center space-x-4">

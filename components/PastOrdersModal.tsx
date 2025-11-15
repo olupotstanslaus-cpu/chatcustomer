@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Order, OrderStatus } from '../types';
 import { statusColors } from '../constants';
 
@@ -16,6 +16,8 @@ const PastOrdersModal: React.FC<PastOrdersModalProps> = ({ orders, onClose, upda
         endDate: '',
     });
     const [isCancelling, setIsCancelling] = useState<string | null>(null);
+    const [isFiltering, setIsFiltering] = useState(false);
+    const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setDateFilter(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -44,34 +46,40 @@ const PastOrdersModal: React.FC<PastOrdersModalProps> = ({ orders, onClose, upda
         }
     };
 
+    useEffect(() => {
+        setIsFiltering(true);
+        const timerId = setTimeout(() => {
+            let result = [...orders];
 
-    const filteredOrders = useMemo(() => {
-        let result = [...orders];
+            if (searchQuery.trim() !== '') {
+                const lowercasedQuery = searchQuery.toLowerCase();
+                result = result.filter(order => 
+                    order.id.toLowerCase().includes(lowercasedQuery) ||
+                    order.items.some(item => item.name.toLowerCase().includes(lowercasedQuery))
+                );
+            }
+    
+            if (statusFilter !== 'All') {
+                result = result.filter(order => order.status === statusFilter);
+            }
+    
+            if (dateFilter.startDate) {
+                const startDate = new Date(dateFilter.startDate + 'T00:00:00');
+                result = result.filter(order => order.timestamp >= startDate);
+            }
+    
+            if (dateFilter.endDate) {
+                const endDate = new Date(dateFilter.endDate + 'T23:59:59');
+                result = result.filter(order => order.timestamp <= endDate);
+            }
+    
+            setFilteredOrders(result.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()));
+            setIsFiltering(false);
+        }, 300);
 
-        if (searchQuery.trim() !== '') {
-            const lowercasedQuery = searchQuery.toLowerCase();
-            result = result.filter(order => 
-                order.id.toLowerCase().includes(lowercasedQuery) ||
-                order.items.some(item => item.name.toLowerCase().includes(lowercasedQuery))
-            );
-        }
-
-        if (statusFilter !== 'All') {
-            result = result.filter(order => order.status === statusFilter);
-        }
-
-        if (dateFilter.startDate) {
-            const startDate = new Date(dateFilter.startDate + 'T00:00:00');
-            result = result.filter(order => order.timestamp >= startDate);
-        }
-
-        if (dateFilter.endDate) {
-            const endDate = new Date(dateFilter.endDate + 'T23:59:59');
-            result = result.filter(order => order.timestamp <= endDate);
-        }
-
-        return result.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        return () => clearTimeout(timerId);
     }, [orders, statusFilter, dateFilter, searchQuery]);
+
 
     const showEta = (status: OrderStatus) => [OrderStatus.CONFIRMED, OrderStatus.PREPARING, OrderStatus.OUTFORDELIVERY].includes(status);
     
@@ -162,8 +170,15 @@ const PastOrdersModal: React.FC<PastOrdersModalProps> = ({ orders, onClose, upda
                     </button>
                 </header>
                 {orders.length > 0 && filterControls}
-                <div className="p-6 flex-grow overflow-y-auto">
-                    {orders.length === 0 ? (
+                <div className="p-6 flex-grow overflow-y-auto relative min-h-[200px]">
+                    {isFiltering ? (
+                         <div className="absolute inset-0 flex items-center justify-center">
+                            <svg className="animate-spin h-8 w-8 text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                    ) : orders.length === 0 ? (
                         <div className="text-center py-10">
                             <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />

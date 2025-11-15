@@ -39,7 +39,7 @@ const ProductManagement: React.FC<ProductManagementProps> = ({ menuItems, addMen
     const sortedMenuItems = [...menuItems].sort((a, b) => a.name.localeCompare(b.name));
 
     return (
-        <div className="flex-grow p-4 overflow-y-auto bg-gray-100 dark:bg-gray-800/50">
+        <div className="p-4 bg-gray-100 dark:bg-gray-800/50">
             <div className="flex justify-end mb-4">
                 <button 
                     onClick={handleAddItem}

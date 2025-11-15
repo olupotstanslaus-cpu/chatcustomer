@@ -1,18 +1,6 @@
 import type { MenuItem } from './types';
 import { OrderStatus } from './types';
 
-export const INITIAL_MENU: MenuItem[] = [
-  { id: 'prod-1', name: 'Margherita Pizza', category: 'Pizza', price: 12.99, description: 'Classic cheese and tomato pizza.' },
-  { id: 'prod-2', name: 'Pepperoni Pizza', category: 'Pizza', price: 14.99, description: 'Pizza with pepperoni slices.' },
-  { id: 'prod-3', name: 'Vegetable Pizza', category: 'Pizza', price: 13.99, description: 'Pizza with assorted vegetables.' },
-  { id: 'prod-4', name: 'Spaghetti Carbonara', category: 'Pasta', price: 15.99, description: 'Pasta with eggs, cheese, and pancetta.' },
-  { id: 'prod-5', name: 'Lasagna', category: 'Pasta', price: 16.99, description: 'Layered pasta with meat and cheese.' },
-  { id: 'prod-6', name: 'Caesar Salad', category: 'Salads', price: 9.99, description: 'Fresh romaine with Caesar dressing.' },
-  { id: 'prod-7', name: 'Tiramisu', category: 'Desserts', price: 7.99, description: 'Coffee-flavoured Italian dessert.' },
-  { id: 'prod-8', name: 'Coca-Cola', category: 'Drinks', price: 2.50, description: 'Classic Coca-Cola.' },
-  { id: 'prod-9', name: 'Water', category: 'Drinks', price: 1.50, description: 'Bottled mineral water.' },
-];
-
 export const GEMINI_SYSTEM_INSTRUCTION = `You are a friendly and efficient WhatsApp chatbot assistant for "Welcome to stanleys restaurant", an Italian restaurant.
 Your primary role is to help customers view the menu, add items to their order, and place their order.
 - Always be polite and conversational. Use emojis to make the conversation more engaging.

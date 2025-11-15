@@ -1,19 +1,33 @@
-import React, { useState, useCallback } from 'react';
-import { Order, OrderStatus, MenuItem, Notification, Page } from './types';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Order, OrderStatus, MenuItem, Notification, Page, User } from './types';
 import CustomerView from './components/CustomerView';
 import AdminView from './components/AdminView';
 import Header from './components/Header';
-import { INITIAL_MENU } from './constants';
+import { INITIAL_MENU, INITIAL_ORDERS, INITIAL_USERS } from './database/db';
 import VideoBackground from './components/VideoBackground';
 import HomePage from './components/HomePage';
-import GalleryPage from './components/GalleryPage';
 import ContactPage from './components/ContactPage';
+import { loadState, saveState } from './services/storageService';
+import GalleryPage from './components/GalleryPage';
 
 const App: React.FC = () => {
   const [page, setPage] = useState<Page>('home');
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(INITIAL_MENU);
+  const [orders, setOrders] = useState<Order[]>(() => loadState<Order[]>('orders') || INITIAL_ORDERS);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => loadState<MenuItem[]>('menuItems') || INITIAL_MENU);
+  const [users, setUsers] = useState<User[]>(() => loadState<User[]>('users') || INITIAL_USERS);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  useEffect(() => {
+    saveState('orders', orders);
+  }, [orders]);
+
+  useEffect(() => {
+    saveState('menuItems', menuItems);
+  }, [menuItems]);
+
+  useEffect(() => {
+    saveState('users', users);
+  }, [users]);
 
   const addOrder = useCallback((newOrderData: Omit<Order, 'estimatedDeliveryTime'>) => {
     const newOrder: Order = {
@@ -60,12 +74,25 @@ const App: React.FC = () => {
     setMenuItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
   }, []);
 
+  const addUser = useCallback((newUserData: Omit<User, 'id'>) => {
+    const newUser: User = {
+      id: `user-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      ...newUserData,
+    };
+    setUsers(prev => [...prev, newUser]);
+  }, []);
+
+  const updateUser = useCallback((updatedUser: User) => {
+    setUsers(prev => prev.map(user => user.id === updatedUser.id ? updatedUser : user));
+  }, []);
+
+
   const renderPage = () => {
     switch (page) {
-      case 'gallery':
-        return <GalleryPage />;
       case 'contact':
         return <ContactPage />;
+      case 'gallery':
+        return <GalleryPage />;
       case 'order':
         return (
           <CustomerView 
@@ -86,6 +113,9 @@ const App: React.FC = () => {
             menuItems={menuItems}
             addMenuItem={addMenuItem}
             updateMenuItem={updateMenuItem}
+            users={users}
+            addUser={addUser}
+            updateUser={updateUser}
           />
         );
       case 'home':

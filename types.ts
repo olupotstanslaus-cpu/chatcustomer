@@ -47,10 +47,22 @@ export interface Order {
   estimatedDeliveryTime: Date;
 }
 
-export type Page = 'home' | 'gallery' | 'contact' | 'order' | 'admin';
+export type Page = 'home' | 'contact' | 'order' | 'admin' | 'gallery';
 
 export interface Notification {
   id: string;
   message: string;
   orderId: string;
+}
+
+export enum UserRole {
+  ADMIN = 'Admin',
+  STAFF = 'Staff',
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
 }

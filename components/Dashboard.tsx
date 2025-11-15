@@ -60,7 +60,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders }) => {
     const getBgColors = (classString: string) => classString.split(' ').filter(c => c.startsWith('bg-') || c.startsWith('dark:bg-')).join(' ');
 
     return (
-        <div className="flex-grow p-6 overflow-y-auto bg-gray-100 dark:bg-gray-800/50 space-y-6">
+        <div className="p-6 bg-gray-100 dark:bg-gray-800/50 space-y-6">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard title="Total Revenue" value={`$${stats.totalRevenue.toFixed(2)}`} icon={<RevenueIcon />} />

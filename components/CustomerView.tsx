@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Message, MessageSender, Order, OrderItem, OrderStatus, MenuItem, Notification } from '../types';
 import { sendMessageToGemini } from '../services/geminiService';
 import PastOrdersModal from './PastOrdersModal';
+import { loadState, saveState } from '../services/storageService';
 
 const ChatBubble: React.FC<{ message: Message }> = ({ message }) => {
   const isUser = message.sender === MessageSender.USER;
@@ -66,16 +67,20 @@ interface CustomerViewProps {
 }
 
 const CustomerView: React.FC<CustomerViewProps> = ({ addOrder, getOrderById, menuItems, orders, updateOrderStatus, notifications, removeNotification }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
+  const initialWelcomeMessage: Message = {
       text: "Hello! 👋 Welcome to stanleys restaurant. How can I help you today? You can ask for the menu, add items to your order, or place an order.",
       sender: MessageSender.BOT,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
+  };
+
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const savedMessages = loadState<Message[]>('chatMessages');
+    return savedMessages && savedMessages.length > 0 ? savedMessages : [initialWelcomeMessage];
+  });
+  const [currentOrder, setCurrentOrder] = useState<OrderItem[]>(() => loadState<OrderItem[]>('currentOrder') || []);
+
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
   const [awaitingOrderConfirmation, setAwaitingOrderConfirmation] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
   const [isPastOrdersModalOpen, setIsPastOrdersModalOpen] = useState(false);
@@ -84,6 +89,15 @@ const CustomerView: React.FC<CustomerViewProps> = ({ addOrder, getOrderById, men
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    saveState('chatMessages', messages);
+  }, [messages]);
+
+  useEffect(() => {
+    saveState('currentOrder', currentOrder);
+  }, [currentOrder]);
+
 
   const localFunctions = {
     getMenu: useCallback(async () => {
@@ -103,18 +117,22 @@ const CustomerView: React.FC<CustomerViewProps> = ({ addOrder, getOrderById, men
             return { success: false, message: `Sorry, we don't have "${itemName}" on our menu.` };
         }
         const newOrderItem: OrderItem = { name: item.name, quantity, price: item.price };
+        
+        let updatedOrder: OrderItem[] = [];
         setCurrentOrder(prev => {
             const existingItemIndex = prev.findIndex(i => i.name === itemName);
             if (existingItemIndex > -1) {
-                const updatedOrder = [...prev];
+                updatedOrder = [...prev];
                 updatedOrder[existingItemIndex].quantity += quantity;
                 return updatedOrder;
             }
-            return [...prev, newOrderItem];
+            updatedOrder = [...prev, newOrderItem];
+            return updatedOrder;
         });
-        const orderTotal = currentOrder.reduce((sum, i) => sum + i.price * i.quantity, 0) + newOrderItem.price * newOrderItem.quantity;
+        
+        const orderTotal = updatedOrder.reduce((sum, i) => sum + i.price * i.quantity, 0);
         return { success: true, message: `Added ${quantity}x ${itemName} to your order. Your current total is $${orderTotal.toFixed(2)}.` };
-    }, [currentOrder, menuItems]),
+    }, [menuItems]),
     placeOrder: useCallback(async () => {
         if (currentOrder.length === 0) {
             return { success: false, message: "Your order is empty. Please add some items before placing an order." };
